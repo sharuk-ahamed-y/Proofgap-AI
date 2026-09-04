@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ProofGap AI — 60s Cinematic Pitch Intro (1920x1080)</title>
+    <!-- Tailwind CSS & React CDN (Zero install required) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: #03060c;
+            color: #f1f5f9;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Fixed 16:9 Viewport Canvas Container */
+        #viewport-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 50% 30%, #081120 0%, #03060c 80%);
+        }
+
+        #stage-16-9 {
+            width: 1920px;
+            height: 1080px;
+            max-width: 100vw;
+            max-height: 56.25vw;
+            position: relative;
+            overflow: hidden;
+            background: #040813;
+            border: 1px solid #111e33;
+            box-shadow: 0 0 80px rgba(0, 0, 0, 0.95);
+        }
+
+        @media (max-aspect-ratio: 16/9) {
+            #stage-16-9 {
+                width: 177.77vh;
+                height: 100vh;
+                max-width: 100vw;
+                max-height: 100vh;
+            }
+        }
+
+        /* Motion Keyframes */
+        @keyframes smoothFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes pulseGlow {
+
+            0%,
+            100% {
+                filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.3));
+            }
+
+            50% {
+                filter: drop-shadow(0 0 35px rgba(6, 182, 212, 0.7));
+            }
+        }
+
+        @keyframes streamData {
+            0% {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(200%);
+                opacity: 0;
+            }
+        }
+
+        .anim-fade-in {
+            animation: smoothFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .glow-pulse {
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function CinematicVideoApp() {
+            const TOTAL_MS = 60000; // 60.0 Seconds
+            const [elapsed, setElapsed] = useState(0);
+            const [isPlaying, setIsPlaying] = useState(true);
+            const [showVO, setShowVO] = useState(true);
+            const [isRecording, setIsRecording] = useState(false);
+            const [recStatus, setRecStatus] = useState("");
+
+            const lastTimeRef = useRef(null);
+            const reqIdRef = useRef(null);
+            const mediaRecorderRef = useRef(null);
+            const recordedChunksRef = useRef([]);
+
+            // Main 60-Second Frame Runner
+            useEffect(() => {
+                const loop = (now) => {
+                    if (lastTimeRef.current !== null && isPlaying) {
+                        const delta = now - lastTimeRef.current;
+                        setElapsed((prev) => {
+                            const next = prev + delta;
+                            if (next >= TOTAL_MS) {
+                                setIsPlaying(false);
+                                if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+                                    mediaRecorderRef.current.stop();
+                                }
+                                return TOTAL_MS;
+                            }
+                            return next;
+                        });
+                    }
+                    lastTimeRef.current = now;
+                    reqIdRef.current = requestAnimationFrame(loop);
+                };
+                reqIdRef.current = requestAnimationFrame(loop);
+                return () => cancelAnimationFrame(reqIdRef.current);
+            }, [isPlaying]);
+
+            // Phase Helper
+            const isPhase = (start, end) => elapsed >= start && elapsed < end;
+            const secondsFormatted = (elapsed / 1000).toFixed(1);
+
+            // Automated Screen Recording Feature (Outputs WebM/MP4 video file)
+            const startVideoRecording = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { displaySurface: "browser", width: 1920, height: 1080, frameRate: 60 },
+                        audio: false
+                    });
+                    recordedChunksRef.current = [];
+                    const options = { mimeType: 'video/webm;codecs=vp9' };
+                    const recorder = new MediaRecorder(stream, options);
+
+                    recorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+                    };
+
+                    recorder.onstop = () => {
+                        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'ProofGap_AI_Cinematic_Problem_Intro_60s.webm';
+                        a.click();
+                        setIsRecording(false);
+                        setRecStatus("Saved to Downloads!");
+                        setTimeout(() => setRecStatus(""), 4000);
+                    };
+
+                    mediaRecorderRef.current = recorder;
+                    recorder.start();
+                    setIsRecording(true);
+                    setRecStatus("Recording... Running 60s pitch");
+                    // Reset to 0 and play
+                    setElapsed(0);
+                    setIsPlaying(true);
+                } catch (err) {
+                    console.error("Recording error:", err);
+                    alert("To record, choose 'This Tab' in the popup and click Share.");
+                }
+            };
+
+            const toggleFullscreen = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            };
+
+            return (
+                <div id="viewport-container">
+                    {/* Main 16:9 Viewport Stage */}
+                    <div id="stage-16-9" className="flex flex-col justify-between p-12">
+
+                        {/* Ambient Background Visual Matrix */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[1100px] h-[600px] bg-gradient-to-b from-cyan-950/20 via-blue-950/10 to-transparent blur-[140px] rounded-full" />
+                            <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:36px_36px] opacity-20" />
+                        </div>
+
+                        {/* Top Control & Branding Bar */}
+                        <div className="relative z-30 flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/30 border border-cyan-500/40 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                                    <span className="text-cyan-400 font-bold text-lg">🛡️</span>
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold tracking-widest text-slate-200 uppercase">PROOFGAP AI</div>
+                                    <div className="text-[11px] font-mono text-cyan-400 tracking-wider">0:00–1:00 PROBLEM INTRO</div>
+                                </div>
+                            </div>
+
+                            {/* Presenter Controls */}
+                            <div className="flex items-center space-x-3">
+                                {recStatus && (
+                                    <span className="text-xs font-mono text-amber-400 animate-pulse px-3 py-1 bg-amber-950/50 rounded-lg border border-amber-800">
+                                        {recStatus}
+                                    </span>
+                                )}
+                                <button
+                                    onClick={startVideoRecording}
+                                    disabled={isRecording}
+                                    className="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center space-x-2 transition"
+                                >
+                                    <span>{isRecording ? "● Recording 60s..." : "🎥 Record Video (WebM/MP4)"}</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowVO(!showVO)}
+                                    className="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition"
+                                >
+                                    {showVO ? "Hide Voiceover Cue" : "Show Voiceover Cue"}
+                                </button>
+                                <button
+                                    onClick={() => { setElapsed(0); setIsPlaying(true); }}
+                                    className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-cyan-400 hover:bg-slate-800 transition"
+                                >
+                                    ↺ Replay
+                                </button>
+                                <button
+                                    onClick={toggleFullscreen}
+                                    className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition"
+                                >
+                                    ⛶ Fullscreen
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Central 16:9 Animated Content Stage */}
+                        <div className="relative z-20 flex-1 flex items-center justify-center my-6">
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:00–0:05 | OPENING — FINANCIAL ACTIVITY */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(0, 5000) && (
+                                <div className="text-center anim-fade-in max-w-4xl">
+                                    <h1 className="text-5xl md:text-7xl font-light tracking-tight text-white mb-8">
+                                        Every transaction creates a{" "}
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 font-semibold">
+                                            trail.
+                                        </span>
+                                    </h1>
+                                    <div className="flex items-center justify-center space-x-6 font-mono text-sm mt-8">
+                                        <span className="px-4 py-2 rounded-xl bg-slate-900/90 border border-cyan-500/30 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+                                            ORD_1042 · ₹5,000
+                                        </span>
+                                        <span className="px-4 py-2 rounded-xl bg-slate-900/90 border border-blue-500/30 text-blue-300 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
+                                            PAY_8F42 · Captured
+                                        </span>
+                                        <span className="px-4 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-400">
+                                            SET_291A · ₹4,900
+                                        </span>
+                                    </div>
+                                    <div className="text-xs font-mono text-slate-500 uppercase tracking-widest mt-8">
+                                        SYNTHETIC RECONCILIATION ECOSYSTEM
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:05–0:15 | MERCHANT → ORDERS */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(5000, 15000) && (
+                                <div className="flex flex-col items-center anim-fade-in w-full max-w-5xl">
+                                    {/* Central Node: Merchant */}
+                                    <div className="px-8 py-4 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-cyan-500/40 shadow-[0_0_35px_rgba(6,182,212,0.2)] text-center mb-6">
+                                        <div className="text-[11px] uppercase font-mono tracking-widest text-cyan-400 font-bold mb-1">
+                                            Central Node · Merchant
+                                        </div>
+                                        <div className="text-2xl font-bold text-white">ABC Electronics</div>
+                                    </div>
+
+                                    {/* Glowing Connection Beam */}
+                                    <div className="w-1 h-14 bg-gradient-to-b from-cyan-400 via-blue-500 to-slate-700 relative mb-4">
+                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-cyan-400 animate-ping" />
+                                    </div>
+
+                                    <div className="text-xs uppercase font-mono tracking-widest text-slate-400 mb-6 flex items-center space-x-2">
+                                        <span>ORDERS INFLOW PIPELINE</span>
+                                    </div>
+
+                                    {/* Flowing Order Cards */}
+                                    <div className="grid grid-cols-4 gap-5 w-full">
+                                        {[
+                                            { id: "ORD_1041", amt: "₹2,500", note: "Standard Checkout" },
+                                            { id: "ORD_1042", amt: "₹5,000", note: "Selected Target", active: true },
+                                            { id: "ORD_1043", amt: "₹1,800", note: "Mobile Web" },
+                                            { id: "ORD_1044", amt: "₹7,200", note: "Cart Inflow" }
+                                        ].map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className={`p-5 rounded-2xl transition-all duration-500 ${item.active
+                                                        ? "bg-slate-900 border border-cyan-400 shadow-[0_0_35px_rgba(6,182,212,0.3)] scale-105"
+                                                        : "bg-slate-950/70 border border-slate-800/80"
+                                                    }`}
+                                            >
+                                                <div className="text-xs font-mono text-slate-400 flex justify-between">
+                                                    <span>{item.id}</span>
+                                                    <span className={item.active ? "text-cyan-400 font-bold" : "text-slate-500"}>
+                                                        {item.active ? "TRACKED" : "Pending"}
+                                                    </span>
+                                                </div>
+                                                <div className="text-2xl font-bold text-white mt-2 font-mono">{item.amt}</div>
+                                                <div className="text-[11px] text-slate-500 mt-2">{item.note}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:15–0:25 | ORDERS → PAYMENTS */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(15000, 25000) && (
+                                <div className="flex flex-col items-center anim-fade-in w-full max-w-5xl">
+                                    <div className="text-xs uppercase font-mono tracking-widest text-slate-400 mb-8">
+                                        Stage Transformation · Order into Downstream Payment Event
+                                    </div>
+
+                                    <div className="flex items-center justify-center space-x-12 w-full">
+                                        {/* Order Node */}
+                                        <div className="w-80 p-7 rounded-3xl bg-slate-950/90 border border-slate-800 text-left">
+                                            <div className="text-[11px] uppercase font-mono tracking-widest text-slate-400">
+                                                Order Origin
+                                            </div>
+                                            <div className="text-2xl font-bold font-mono text-white mt-1">ORD_1042</div>
+                                            <div className="text-3xl font-bold text-cyan-400 mt-3 font-mono">₹5,000</div>
+                                            <div className="text-xs text-slate-400 mt-3">Customer Cart Event · 10:14 AM</div>
+                                        </div>
+
+                                        {/* Animated Gateway Beam */}
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-[11px] font-mono text-blue-400 mb-2 font-semibold">Payment Auth</div>
+                                            <div className="flex items-center space-x-2">
+                                                <div className="w-20 h-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" />
+                                                <span className="text-blue-400 text-2xl font-bold">➔</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Payment Node */}
+                                        <div className="w-96 p-7 rounded-3xl bg-slate-900 border border-blue-500/50 shadow-[0_0_40px_rgba(59,130,246,0.25)] text-left">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[11px] uppercase font-mono tracking-widest text-blue-400 font-bold">
+                                                    Payment Record
+                                                </span>
+                                                <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-300 font-semibold">
+                                                    Captured
+                                                </span>
+                                            </div>
+                                            <div className="text-2xl font-bold font-mono text-white mt-2">PAY_8F42</div>
+                                            <div className="text-3xl font-bold text-white mt-3 font-mono">₹5,000</div>
+                                            <div className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800 flex justify-between font-mono">
+                                                <span>Gateway: UPI</span>
+                                                <span>RRN: 981402891</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-mono mt-8">
+                                        Single transaction produces discrete asynchronous gateway telemetry.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:25–0:35 | PAYMENTS → SETTLEMENTS */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(25000, 35000) && (
+                                <div className="flex flex-col items-center anim-fade-in w-full max-w-5xl">
+                                    <div className="text-xs uppercase font-mono tracking-widest text-slate-400 mb-8">
+                                        Settlement Batch Ingestion & Fee Discrepancy Generation
+                                    </div>
+
+                                    <div className="flex items-center justify-center space-x-8 w-full">
+                                        {/* Payment Card */}
+                                        <div className="w-72 p-6 rounded-3xl bg-slate-950 border border-slate-800 text-left opacity-75">
+                                            <div className="text-[11px] uppercase font-mono text-slate-400">Payment ID</div>
+                                            <div className="text-xl font-bold font-mono text-white mt-1">PAY_8F42</div>
+                                            <div className="text-2xl font-bold text-slate-300 mt-2 font-mono">₹5,000</div>
+                                            <div className="text-xs text-slate-500 mt-2">Gross Transaction</div>
+                                        </div>
+
+                                        {/* Fee Adjustment Node */}
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-xs font-mono text-amber-400 mb-2 font-bold">-₹100 Deductions</div>
+                                            <span className="text-amber-400 text-2xl font-bold">➔</span>
+                                        </div>
+
+                                        {/* Settlement Card */}
+                                        <div className="w-96 p-7 rounded-3xl bg-slate-900 border border-amber-500/40 shadow-[0_0_40px_rgba(245,158,11,0.2)] text-left">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[11px] uppercase font-mono tracking-widest text-amber-400 font-bold">
+                                                    Settlement Record
+                                                </span>
+                                                <span className="text-xs font-mono text-slate-400">T+2 Cycle</span>
+                                            </div>
+                                            <div className="text-2xl font-bold font-mono text-white mt-1">SET_291A</div>
+                                            <div className="text-4xl font-extrabold text-amber-400 mt-2 font-mono">₹4,900</div>
+
+                                            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-800 text-xs font-mono">
+                                                <div className="text-slate-400">MDR Fee: <span className="text-slate-200">₹88.50</span></div>
+                                                <div className="text-slate-400">GST (18%): <span className="text-slate-200">₹11.50</span></div>
+                                                <div className="text-slate-400">Adjustment: <span className="text-emerald-400">₹0.00</span></div>
+                                                <div className="text-slate-400">Status: <span className="text-slate-200">Settled</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:35–0:42 | SETTLEMENTS → ACCOUNTING (FULL TRAIL ZOOM OUT) */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(35000, 42000) && (
+                                <div className="flex flex-col items-center anim-fade-in w-full max-w-6xl">
+                                    <h2 className="text-3xl font-light text-white mb-2">The Complete Financial Trail</h2>
+                                    <p className="text-xs font-mono text-slate-400 mb-10 uppercase tracking-widest">
+                                        Customer Checkout ➔ General Ledger Pipeline
+                                    </p>
+
+                                    <div className="flex items-center justify-between w-full p-8 rounded-3xl bg-slate-950/80 border border-slate-800 shadow-2xl relative">
+                                        <div className="absolute top-1/2 left-20 right-20 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 -translate-y-1/2 z-0 opacity-60" />
+
+                                        {[
+                                            { step: "01", name: "MERCHANT", sub: "ABC Electronics", type: "Origin" },
+                                            { step: "02", name: "ORDERS", sub: "ORD_1042 · ₹5k", type: "Cart Inflow" },
+                                            { step: "03", name: "PAYMENTS", sub: "PAY_8F42 · Captured", type: "Gateway" },
+                                            { step: "04", name: "SETTLEMENTS", sub: "SET_291A · ₹4.9k", type: "Bank Batch" },
+                                            { step: "05", name: "ACCOUNTING", sub: "General Ledger", type: "Audit Entry" }
+                                        ].map((node) => (
+                                            <div
+                                                key={node.step}
+                                                className="relative z-10 w-44 p-4 rounded-2xl bg-slate-900 border border-slate-700/80 text-center shadow-lg"
+                                            >
+                                                <div className="text-[10px] uppercase font-mono tracking-widest text-cyan-400 font-bold">
+                                                    {node.step} · {node.type}
+                                                </div>
+                                                <div className="text-sm font-bold text-white mt-1">{node.name}</div>
+                                                <div className="text-[11px] font-mono text-slate-400 mt-1">{node.sub}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:42–0:48 | THE SCALE PROBLEM (500+ RECORDS, 3 GROUPS) */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(42000, 48000) && (
+                                <div className="flex flex-col items-center anim-fade-in w-full max-w-6xl text-center">
+                                    <div className="text-xs font-mono uppercase tracking-widest px-4 py-1.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-300 font-bold mb-4">
+                                        Scale Ingestion · 500+ Financial Records
+                                    </div>
+                                    <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-8 tracking-tight">
+                                        Real-World Records Fracture at Scale
+                                    </h2>
+
+                                    <div className="grid grid-cols-3 gap-8 w-full">
+                                        {/* Clear Matches */}
+                                        <div className="p-7 rounded-3xl bg-emerald-950/20 border border-emerald-500/40 text-left shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-mono font-bold text-emerald-400 uppercase">
+                                                    🟢 CLEAR MATCHES
+                                                </span>
+                                                <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300">
+                                                    78% (390)
+                                                </span>
+                                            </div>
+                                            <div className="text-4xl font-extrabold text-white font-mono mt-4">390 Records</div>
+                                            <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+                                                Exact amount, identical settlement batch timestamp, corroborated transaction reference.
+                                            </p>
+                                        </div>
+
+                                        {/* Ambiguous */}
+                                        <div className="p-7 rounded-3xl bg-amber-950/20 border border-amber-500/40 text-left shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-mono font-bold text-amber-400 uppercase">
+                                                    🟡 AMBIGUOUS
+                                                </span>
+                                                <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-amber-900/40 text-amber-300">
+                                                    14% (70)
+                                                </span>
+                                            </div>
+                                            <div className="text-4xl font-extrabold text-white font-mono mt-4">70 Records</div>
+                                            <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+                                                Multiple candidate orders for same amount, missing settlement batch reference hash.
+                                            </p>
+                                        </div>
+
+                                        {/* Contradictions */}
+                                        <div className="p-7 rounded-3xl bg-rose-950/20 border border-rose-500/40 text-left shadow-[0_0_30px_rgba(244,63,94,0.15)]">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-mono font-bold text-rose-400 uppercase">
+                                                    🔴 CONTRADICTIONS
+                                                </span>
+                                                <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-rose-900/40 text-rose-300">
+                                                    8% (40)
+                                                </span>
+                                            </div>
+                                            <div className="text-4xl font-extrabold text-white font-mono mt-4">40 Records</div>
+                                            <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+                                                Reversed payout marked settled, contradictory webhook vs gateway ledger timestamps.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:48–0:53 | THE REAL PROBLEM */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(48000, 53000) && (
+                                <div className="flex flex-col items-center anim-fade-in text-center max-w-5xl">
+                                    <h1 className="text-4xl md:text-6xl font-light text-white mb-10 tracking-tight">
+                                        Can we safely automate every match?
+                                    </h1>
+
+                                    <div className="w-full p-10 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-[0_0_80px_rgba(0,0,0,0.9)]">
+                                        <div className="flex items-center justify-center space-x-6 text-2xl md:text-4xl font-mono font-bold tracking-wider">
+                                            <span className="text-blue-400">HIGH MATCH CONFIDENCE</span>
+                                            <span className="text-rose-500 text-5xl font-sans">≠</span>
+                                            <span className="text-emerald-400">SAFE AUTOMATION</span>
+                                        </div>
+                                        <p className="text-base text-slate-400 mt-6 max-w-2xl mx-auto font-sans font-light">
+                                            Automating on model confidence alone introduces catastrophic audit drift when evidence is incomplete.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:53–0:57 | THE HOOK */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(53000, 57000) && (
+                                <div className="flex flex-col items-center anim-fade-in w-full max-w-2xl">
+                                    <div className="w-full p-10 rounded-3xl bg-slate-900/90 border border-amber-500/40 shadow-[0_0_50px_rgba(245,158,11,0.2)] text-center">
+                                        <div className="grid grid-cols-2 gap-8 mb-8">
+                                            {/* Match Probability */}
+                                            <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800">
+                                                <div className="text-xs uppercase font-mono tracking-widest text-slate-400 mb-1">
+                                                    Match Probability
+                                                </div>
+                                                <div className="text-5xl font-extrabold font-mono text-cyan-400 mt-2">94%</div>
+                                                <div className="text-xs text-slate-500 mt-2">High statistical affinity</div>
+                                            </div>
+
+                                            {/* Evidence Sufficiency */}
+                                            <div className="p-6 rounded-2xl bg-slate-950 border border-amber-500/50">
+                                                <div className="text-xs uppercase font-mono tracking-widest text-amber-400 mb-1">
+                                                    Evidence Sufficiency
+                                                </div>
+                                                <div className="text-5xl font-extrabold font-mono text-amber-400 mt-2">61%</div>
+                                                <div className="text-xs text-amber-500/80 mt-2">Under minimum proof bar</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Incomplete Evidence Pill */}
+                                        <div className="inline-flex items-center space-x-3 px-6 py-3 rounded-2xl bg-amber-950/70 border border-amber-500/60 text-amber-300 text-sm font-semibold mb-6">
+                                            <span className="text-lg">⚠️</span>
+                                            <span>Evidence Incomplete: Missing Settlement Reference Hash</span>
+                                        </div>
+
+                                        <div className="text-xs font-mono tracking-widest uppercase text-slate-400">
+                                            Autonomous Execution Blocked ➔ <span className="text-amber-400 font-bold">ROUTED TO HUMAN REVIEW</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ------------------------------------------------------------- */}
+                            {/* 0:57–1:00 | PROOFGAP REVEAL */}
+                            {/* ------------------------------------------------------------- */}
+                            {isPhase(57000, 60000) && (
+                                <div className="flex flex-col items-center anim-fade-in text-center max-w-4xl">
+                                    {/* Glowing Shield */}
+                                    <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500 to-blue-600 p-0.5 shadow-[0_0_60px_rgba(6,182,212,0.5)] mb-8 glow-pulse">
+                                        <div className="w-full h-full bg-slate-950 rounded-3xl flex items-center justify-center text-4xl">
+                                            🛡️
+                                        </div>
+                                    </div>
+
+                                    <h1 className="text-6xl md:text-8xl font-black text-white tracking-tight mb-4">
+                                        PROOFGAP <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">AI</span>
+                                    </h1>
+
+                                    <div className="text-2xl font-semibold text-slate-300 mb-6">
+                                        Evidence-Aware Financial Automation
+                                    </div>
+
+                                    <p className="text-lg text-slate-400 font-light italic max-w-xl mx-auto leading-relaxed">
+                                        «Don't automate because AI is confident.
+                                        <br />
+                                        <span className="text-cyan-300 font-normal not-italic">
+                                            Automate when the evidence is sufficient.
+                                        </span>»
+                                    </p>
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Voiceover Script Box */}
+                        {showVO && (
+                            <div className="relative z-30 max-w-3xl w-full mx-auto p-4 rounded-2xl bg-slate-950/90 border border-slate-800/90 backdrop-blur-md text-center shadow-lg">
+                                <div className="text-[10px] uppercase font-mono tracking-widest text-cyan-400 font-bold mb-1">
+                                    Synchronized Voiceover Cue · {secondsFormatted}s / 60.0s
+                                </div>
+                                <div className="text-sm text-slate-200 font-medium">
+                                    {elapsed < 5000 && "«Every financial transaction creates a trail.»"}
+                                    {elapsed >= 5000 && elapsed < 15000 && "«For a merchant, that trail starts with an order.»"}
+                                    {elapsed >= 15000 && elapsed < 25000 && "«It becomes a payment...»"}
+                                    {elapsed >= 25000 && elapsed < 35000 && "«...then a settlement...»"}
+                                    {elapsed >= 35000 && elapsed < 42000 && "«...and finally enters the merchant's financial records.»"}
+                                    {elapsed >= 42000 && elapsed < 48000 && "«At scale, hundreds or thousands of records need to be reconciled.»"}
+                                    {elapsed >= 48000 && elapsed < 53000 && "«Some match perfectly. Some are ambiguous. And some contradict each other.»"}
+                                    {elapsed >= 53000 && elapsed < 57000 && "«So the real question isn't simply: can AI find a match? It's: can we safely automate that decision?»"}
+                                    {elapsed >= 57000 && "«Meet ProofGap AI: Evidence-Aware Financial Automation.»"}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Bottom 60s Scrubber & Phase Indicator */}
+                        <div className="relative z-30 flex flex-col pt-4">
+                            <div className="flex justify-between items-center text-xs font-mono text-slate-400 mb-2">
+                                <div className="flex items-center space-x-3">
+                                    <button
+                                        onClick={() => setIsPlaying(!isPlaying)}
+                                        className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-200 hover:text-cyan-400 transition"
+                                    >
+                                        {isPlaying ? "❚❚" : "▶"}
+                                    </button>
+                                    <span className="font-bold text-white">
+                                        {Math.floor(elapsed / 1000)}s / 60s
+                                    </span>
+                                </div>
+
+                                <div className="text-cyan-400 font-bold uppercase tracking-wider">
+                                    {elapsed < 5000 && "01 · Trail Origin"}
+                                    {elapsed >= 5000 && elapsed < 15000 && "02 · Merchant ➔ Orders"}
+                                    {elapsed >= 15000 && elapsed < 25000 && "03 · Orders ➔ Payments"}
+                                    {elapsed >= 25000 && elapsed < 35000 && "04 · Payments ➔ Settlements"}
+                                    {elapsed >= 35000 && elapsed < 42000 && "05 · Complete Trail"}
+                                    {elapsed >= 42000 && elapsed < 48000 && "06 · Scale Fracture"}
+                                    {elapsed >= 48000 && elapsed < 53000 && "07 · Automation Paradox"}
+                                    {elapsed >= 53000 && elapsed < 57000 && "08 · Evidence Gap"}
+                                    {elapsed >= 57000 && "09 · ProofGap AI"}
+                                </div>
+                            </div>
+
+                            <input
+                                type="range"
+                                min={0}
+                                max={TOTAL_MS}
+                                value={elapsed}
+                                onChange={(e) => setElapsed(Number(e.target.value))}
+                                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                            />
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<CinematicVideoApp />, document.getElementById('root'));
+    </script>
+</body>
+
+</html>
