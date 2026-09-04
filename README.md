@@ -139,21 +139,9 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
----
-
-## 🎬 5-Minute Demo Video Script
-
-| Time | Screen | Key Narration / Action |
-|---|---|---|
-| **0:00–0:30** | **Landing Page** | Introduce the problem: Traditional AI automates on confidence alone. ProofGap AI automates on **proof**. |
-| **0:30–1:00** | **Dashboard** | Show the 76% Safe, 18% Review, 6% Exception breakdown, 94.7 Safety Score, and ₹42,500 Risk Avoided. |
-| **1:00–2:00** | **Reconciliation Lab** | Click *Load Demo Dataset* (250 records) $\to$ Click *✨ Analyze Evidence & Reconcile* $\to$ Watch the 7-step pipeline animation. |
-| **2:00–3:00** | **Demo Mode (Scenario 2)** | **The Killer Demo:** Open TXN-1025. Show 94% Match Confidence BUT 62% Evidence Sufficiency $\to$ 🛑 **Automation Abstained**. |
-| **3:00–3:45** | **Evidence Intelligence** | Break down why: Missing Bank UTR + duplicate candidate risk. Explain **CONFIDENCE ≠ SAFETY**. |
-| **3:45–4:30** | **Exceptions & Analytics** | Show the human review queue, Amount Conflict (₹15k vs ₹10k), and baseline comparison (1.3% unsafe automation). |
-| **4:30–5:00** | **Audit Trail** | Demonstrate 100% cryptographic and rule-based decision explainability. End on ProofGap AI tagline. |
 
 ---
+
 
 ## 🔒 Limitations & Future Work
 - **Real-Time ERP Connectors:** In this hackathon release, ERP and bank statement data are ingested via CSV/JSON and synthetic connectors. Direct SAP/NetSuite API connectors are planned for v2.
